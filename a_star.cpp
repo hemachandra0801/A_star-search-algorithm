@@ -56,7 +56,7 @@ void tracePath(vector<vector<cell>>& cellDetails, pair<int, int>& dest) {
 	}
 }
 
-void aStarSearch(vector<vector<int>>& grid, pair<int, int>& src, pair<int, int>& dest) {
+void astar(vector<vector<int>>& grid, pair<int, int>& src, pair<int, int>& dest) {
 
 	if (!isValid(src.first, src.second)) {
 		std::cout << "Source is invalid\n";
@@ -185,7 +185,7 @@ int main() {
 	pair<int, int> src = make_pair(start_x, start_y);
 	pair<int, int> dest = make_pair(goal_x, goal_y);
 
-	aStarSearch(grid, src, dest);
+	astar(grid, src, dest);
 
 	return 0;
 }
