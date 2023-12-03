@@ -16,19 +16,19 @@ struct cell {
 	double f, g, h;
 };
 
-bool isValid(int row, int col) {
+inline bool isValid(int row, int col) {
 	return row >= 0 && row < ROW && col >= 0 && col < COL;
 }
 
-bool isUnBlocked(vector<vector<int>>& grid, int row, int col) {
+inline bool isUnBlocked(vector<vector<int>>& grid, int row, int col) {
 	return grid[row][col] == 0;
 }
 
-bool isDestination(int row, int col, pair<int, int>& dest) {
+inline bool isDestination(int row, int col, pair<int, int>& dest) {
 	return row == dest.first && col == dest.second;
 }
 
-double calculateHValue(int row, int col, pair<int, int>& dest) {
+inline double calculateHValue(int row, int col, pair<int, int>& dest) {
 	return (double)sqrt((row - dest.first) * (row - dest.first)+ (col - dest.second) * (col - dest.second));
 }
 
