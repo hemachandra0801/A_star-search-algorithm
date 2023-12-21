@@ -6,147 +6,134 @@
 #include <iterator>
 #include <utility>
 #include <float.h>
+#include <unordered_map>
 
 using namespace std;
 
-int ROW = -1, COL = -1;
-
 struct cell {
-	int parent_i, parent_j;
+	string parent;
 	double f, g, h;
 };
 
-inline bool isValid(int row, int col) {
-	return row >= 0 && row < ROW && col >= 0 && col < COL;
+inline bool isValid(string& node, unordered_map<string, vector<pair<string, int>>>& graph) {
+	return graph.find(node) != graph.end();
 }
 
-inline bool isUnBlocked(vector<vector<int>>& grid, int row, int col) {
-	return grid[row][col] == 0;
+inline bool isUnBlocked(string& node, unordered_map<string, vector<pair<string, int>>>& graph) {
+	return graph[node].size() > 0;
 }
 
-inline bool isDestination(int row, int col, pair<int, int>& dest) {
-	return row == dest.first && col == dest.second;
+inline bool isDestination(string& node, string& goal) {
+	return node == goal;
 }
 
-inline double calculateHValue(int row, int col, pair<int, int>& dest) {
-	return (double)sqrt((row - dest.first) * (row - dest.first)+ (col - dest.second) * (col - dest.second));
+inline double calculateHValue(string& node, string& goal) {
+	//return (double)sqrt((row - dest.first) * (row - dest.first)+ (col - dest.second) * (col - dest.second));
+	return 0;
 }
 
-void tracePath(vector<vector<cell>>& cellDetails, pair<int, int>& dest) {
+void tracePath(unordered_map<string, cell>& cellDetails, string& goal) {
 
 	std::cout << '\n' << "The Path is ";
-	int row = dest.first;
-	int col = dest.second;
+	string curr = goal;
 
-	stack<pair<int, int>> Path;
+	stack<string> Path;
 
-	while (!(cellDetails[row][col].parent_i == row && cellDetails[row][col].parent_j == col)) {
-		Path.push(make_pair(row, col));
-		int temp_row = cellDetails[row][col].parent_i;
-		int temp_col = cellDetails[row][col].parent_j;
-		row = temp_row;
-		col = temp_col;
+	while (cellDetails[curr].parent != curr) {
+		Path.push(curr);
+		string temp_curr = cellDetails[curr].parent;
+		curr = temp_curr;
 	}
 
-	Path.push(make_pair(row, col));
+	Path.push(curr);
 	while (!Path.empty()) {
-		pair<int, int> p = Path.top();
+		string p = Path.top();
 		Path.pop();
-		std::cout << "-> (" << p.first << ", " << p.second << ") ";
+		std::cout << "-> " << p << " ";
 	}
 }
 
-void astar(vector<vector<int>>& grid, pair<int, int>& src, pair<int, int>& dest) {
+void astar(unordered_map<string, vector<pair<string, int>>>& graph, string& start, string& goal) {
 
-	if (!isValid(src.first, src.second)) {
+	if (!isValid(start, graph)) {
 		std::cout << "Source is invalid\n";
 		return;
 	}
 
-	if (!isValid(dest.first, dest.second)) {
+	if (!isValid(goal, graph)) {
 		std::cout << "Destination is invalid\n";
 		return;
 	}
 
-	if (!isUnBlocked(grid, src.first, src.second) || !isUnBlocked(grid, dest.first, dest.second)) {
+	if (!isUnBlocked(start, graph) || !isUnBlocked(start, graph)) {
 		std::cout << "Source or the destination is blocked\n";
 		return;
 	}
 
-	if (isDestination(src.first, src.second, dest)) {
+	if (isDestination(start, goal)) {
 		std::cout << "We are already at the destination\n";
 		return;
 	}
 
-	vector<vector<bool>> closedList(ROW, vector<bool>(COL, false));
+	unordered_map<string, bool> closedList;
 
-	vector<vector<cell>> cellDetails(ROW, vector<cell>(COL));
+	unordered_map<string, cell> cellDetails;
 
-	int i, j;
 
-	for (i = 0; i < ROW; i++) {
-		for (j = 0; j < COL; j++) {
-			cellDetails[i][j].f = FLT_MAX;
-			cellDetails[i][j].g = FLT_MAX;
-			cellDetails[i][j].h = FLT_MAX;
-			cellDetails[i][j].parent_i = -1;
-			cellDetails[i][j].parent_j = -1;
-		}
+	for (auto& i : graph) {
+		cellDetails[i.first].f = FLT_MAX;
+		cellDetails[i.first].g = FLT_MAX;
+		cellDetails[i.first].h = FLT_MAX;
+		cellDetails[i.first].parent = "";
+
+		closedList[i.first] = false;
 	}
 
-	i = src.first, j = src.second;
-	cellDetails[i][j].f = 0.0;
-	cellDetails[i][j].g = 0.0;
-	cellDetails[i][j].h = 0.0;
-	cellDetails[i][j].parent_i = i;
-	cellDetails[i][j].parent_j = j;
+	cellDetails[start].f = 0.0;
+	cellDetails[start].g = 0.0;
+	cellDetails[start].h = 0.0;
+	cellDetails[start].parent = start;
 
-	set<pair<double, pair<int, int>>> openList;
+	set<pair<double, string>> openList;
 
-	openList.insert(make_pair(0.0, make_pair(i, j)));
+	openList.insert(make_pair(0.0, start));
 
 	bool foundDest = false;
 
 	while (!openList.empty()) {
-		pair<double, pair<int, int>> p = *openList.begin();
+		pair<double, string> p = *openList.begin();
 
 		openList.erase(openList.begin());
 
-		i = p.second.first;
-		j = p.second.second;
-		closedList[i][j] = true;
+		string i = p.second;
+		closedList[i] = true;
 
 		double gNew, hNew, fNew;
 
-        vector<vector<int>> dir = {{0, 1}, {1, 0}, {-1, 0}, {0, -1}, {1, 1}, {-1, -1}, {1, -1}, {-1, 1}};
 
-        for (auto& d : dir) {
-            if (isValid(i + d[0], j + d[1])) {
-                if (isDestination(i + d[0], j + d[1], dest)) {
-                    cellDetails[i + d[0]][j + d[1]].parent_i = i;
-                    cellDetails[i + d[0]][j + d[1]].parent_j = j;
-                    std::cout << "\nThe destination cell is found\n";
-                    tracePath(cellDetails, dest);
-                    foundDest = true;
-                    return;
-                }
+        for (auto& d : graph[i]) {
+			if (isDestination(d.first, goal)) {
+				cellDetails[d.first].parent= i;
+				std::cout << "\nThe destination cell is found\n";
+				tracePath(cellDetails, goal);
+				foundDest = true;
+				return;
+			}
 
-                else if (!closedList[i + d[0]][j + d[1]] && isUnBlocked(grid, i + d[0], j + d[1])) {
-                    gNew = cellDetails[i][j].g + (d[0] != 0 && d[1] != 0 ? 1.414 : 1.0);
-                    hNew = calculateHValue(i + d[0], j + d[1], dest);
-                    fNew = gNew + hNew;
+			else if (!closedList[d.first] && isUnBlocked(d.first, graph)) {
+				gNew = cellDetails[i].g + d.second;
+				hNew = calculateHValue(d.first, goal);
+				fNew = gNew + hNew;
 
-                    if (cellDetails[i + d[0]][j + d[1]].f == FLT_MAX || cellDetails[i + d[0]][j + d[1]].f > fNew) {
-                        openList.insert(make_pair(fNew, make_pair(i + d[0], j + d[1])));
+				if (cellDetails[d.first].f == FLT_MAX || cellDetails[d.first].f > fNew) {
+					openList.insert(make_pair(fNew, d.first));
 
-                        cellDetails[i + d[0]][j + d[1]].f = fNew;
-                        cellDetails[i + d[0]][j + d[1]].g = gNew;
-                        cellDetails[i + d[0]][j + d[1]].h = hNew;
-                        cellDetails[i + d[0]][j + d[1]].parent_i = i;
-                        cellDetails[i + d[0]][j + d[1]].parent_j = j;
-                    }
-                }
-            }
+					cellDetails[d.first].f = fNew;
+					cellDetails[d.first].g = gNew;
+					cellDetails[d.first].h = hNew;
+					cellDetails[d.first].parent = i;
+				}
+			}
         }
 	}
 
@@ -158,34 +145,30 @@ void astar(vector<vector<int>>& grid, pair<int, int>& src, pair<int, int>& dest)
 
 int main() {
 
+	unordered_map<string, vector<pair<string, int>>> graph;
 
-	std::cout << "Enter the number of rows and columns in the grid (row, col): ";
-	std::cin >> ROW >> COL;
-	
-	vector<vector<int>> grid(ROW, vector<int>(COL));
-
-	std::cout << "\nEnter the grid below\n";
-	for (int i = 0; i < ROW; ++i) {
-		string dummy;
-		std::cin >> dummy;
-		for (int j = 0; j < COL; ++j) {
-			grid[i][j] = dummy[j] - '0';
-		}
+	int edges;
+	std::cout << "Enter the number of edges: ";
+	std::cout << "\nEnter the graph below (NODE1 -> NODE2 -> DISTANCE)\n";
+	for (int i = 0; i < edges; ++i) {
+		int distance;
+		string node1, node2;
+		std::cin >> node1 >> node2 >> distance;
+		graph[node1].push_back({node2, distance});
 	}
 
-	int start_x = -1, start_y = -1;
-	int goal_x = -1, goal_y = -1;
+	string start = "";
+	string goal = "";
 
-	std::cout << "\nEnter the coordinates of the source (x, y): ";
-	std::cin >> start_x >> start_y;
 
-	std::cout << "\nEnter the coordinates of the destination (x, y): ";
-	std::cin >> goal_x >> goal_y;
+	std::cout << "\nEnter the name of the starting location: ";
+	std::cin >> start;
 
-	pair<int, int> src = make_pair(start_x, start_y);
-	pair<int, int> dest = make_pair(goal_x, goal_y);
+	std::cout << "\nEnter the name of the destination: ";
+	std::cin >> goal;
+	
 
-	astar(grid, src, dest);
+	astar(graph, start, goal);
 
 	return 0;
 }
