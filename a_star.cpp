@@ -7,6 +7,7 @@
 #include <utility>
 #include <float.h>
 #include <unordered_map>
+#include <unordered_set>
 
 using namespace std;
 
@@ -15,11 +16,11 @@ struct cell {
 	double f, g, h;
 };
 
-inline bool isValid(string& node, unordered_map<string, vector<pair<string, int>>>& graph) {
-	return graph.find(node) != graph.end();
+inline bool isValid(string& node, unordered_set<string>& nodes) {
+	return nodes.find(node) != nodes.end();
 }
 
-inline bool isUnBlocked(string& node, unordered_map<string, vector<pair<string, int>>>& graph) {
+inline bool isUnBlocked(string& node, unordered_map<string, vector<pair<string, double>>>& graph) {
 	return graph[node].size() > 0;
 }
 
@@ -28,6 +29,7 @@ inline bool isDestination(string& node, string& goal) {
 }
 
 inline double calculateHValue(string& node, string& goal) {
+	// Enter the heuristic here
 	//return (double)sqrt((row - dest.first) * (row - dest.first)+ (col - dest.second) * (col - dest.second));
 	return 0;
 }
@@ -53,22 +55,7 @@ void tracePath(unordered_map<string, cell>& cellDetails, string& goal) {
 	}
 }
 
-void astar(unordered_map<string, vector<pair<string, int>>>& graph, string& start, string& goal) {
-
-	if (!isValid(start, graph)) {
-		std::cout << "Source is invalid\n";
-		return;
-	}
-
-	if (!isValid(goal, graph)) {
-		std::cout << "Destination is invalid\n";
-		return;
-	}
-
-	if (!isUnBlocked(start, graph) || !isUnBlocked(start, graph)) {
-		std::cout << "Source or the destination is blocked\n";
-		return;
-	}
+void astar(unordered_map<string, vector<pair<string, double>>>& graph, string& start, string& goal) {
 
 	if (isDestination(start, goal)) {
 		std::cout << "We are already at the destination\n";
@@ -114,7 +101,7 @@ void astar(unordered_map<string, vector<pair<string, int>>>& graph, string& star
         for (auto& d : graph[i]) {
 			if (isDestination(d.first, goal)) {
 				cellDetails[d.first].parent= i;
-				std::cout << "\nThe destination cell is found\n";
+				std::cout << "\nThe shortest path has been found\n";
 				tracePath(cellDetails, goal);
 				foundDest = true;
 				return;
@@ -145,15 +132,21 @@ void astar(unordered_map<string, vector<pair<string, int>>>& graph, string& star
 
 int main() {
 
-	unordered_map<string, vector<pair<string, int>>> graph;
+	unordered_map<string, vector<pair<string, double>>> graph;
+	unordered_set<string> nodes;
 
 	int edges;
 	std::cout << "Enter the number of edges: ";
+	std::cin >> edges;
+
 	std::cout << "\nEnter the graph below (NODE1 -> NODE2 -> DISTANCE)\n";
 	for (int i = 0; i < edges; ++i) {
-		int distance;
+		double distance;
 		string node1, node2;
 		std::cin >> node1 >> node2 >> distance;
+
+		nodes.insert(node1);
+		nodes.insert(node2);
 		graph[node1].push_back({node2, distance});
 	}
 
@@ -162,10 +155,16 @@ int main() {
 
 
 	std::cout << "\nEnter the name of the starting location: ";
-	std::cin >> start;
+	while (std::cin >> start) {
+		if (isValid(start, nodes)) break;
+		std::cout << "Source is invalid\n";
+	}
 
 	std::cout << "\nEnter the name of the destination: ";
-	std::cin >> goal;
+	while (std::cin >> goal) {
+		if (isValid(goal, nodes)) break;
+		std::cout << "Destination is invalid\n";
+	}
 	
 
 	astar(graph, start, goal);
