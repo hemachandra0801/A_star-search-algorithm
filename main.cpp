@@ -1,5 +1,7 @@
 #include <iostream>
 #include <curl/curl.h>
+#include <string>
+#include "a_star.h"
 #include "simdjson.h"
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
@@ -49,15 +51,80 @@ int main() {
   simdjson::dom::element receivedJson = parser.parse(receivedData);
 
 
+	std::string start = "";
+	std::string goal = "";
+	std::unordered_map<std::string, std::vector<std::pair<std::string, double>>> graph;
+	std::unordered_set<std::string> nodes;
 
-  // Run the algorithm and do the operations here
+  simdjson::dom::element startElement = receivedJson["start"];
+  simdjson::dom::element goalElement = receivedJson["destination"];
+  simdjson::dom::element graphElement = receivedJson["graph"];
 
+  if (startElement.is_string() && goalElement.is_string() && graphElement.is_array()) {
+    start = startElement.get_string().value();
+    goal = goalElement.get_string().value();
 
- 
+    for (simdjson::dom::element innerArrayElement : graphElement) {
+      if (innerArrayElement.is_array()) {
+        double distance;
+        std::string node1, node2;
+
+        int currNode = 1;
+        for (simdjson::dom::element value : innerArrayElement) {
+          if (value.is_string()) {
+            if (currNode++ == 1) {
+              node1 = value.get_string().value();
+            }
+            else {
+              node2 = value.get_string().value();
+            }
+          }
+          else if (value.is_double()) {
+            distance = value.get_double().value();
+          }
+          else {
+            std::cerr << "Error: Unexpected value type in the inner array." << '\n';
+            return 1;
+          }
+        }
+
+        nodes.insert(node1);
+        nodes.insert(node2);
+        graph[node1].push_back({node2, distance});
+      }
+    }
+  }
+  else {
+    std::cerr << "Error: Invalid JSON structure or missing keys." << '\n';
+  }
+	
+
+  if (!isValid(start, nodes)) {
+		std::cout << "Source is invalid\n";
+    return 1;
+  }
+
+  if (!isValid(goal, nodes)) {
+		std::cout << "Destination is invalid\n";
+    return 1;
+  }
+
+  std::string optimalPath = astar(graph, start, goal);
+
   rapidjson::Document sendJson;
   sendJson.SetObject();
   rapidjson::Document::AllocatorType& allocator = sendJson.GetAllocator();
-  sendJson.AddMember("key", "new_value", allocator);
+  // sendJson.AddMember("key", "new_value", allocator);
+
+  if (optimalPath == "Path not found") {
+    sendJson.AddMember("optimalPath", "Path not found", allocator);
+  }
+  else if (optimalPath == "At destination") {
+    sendJson.AddMember("optimalPath", "At destination", allocator);
+  }
+  else {
+    sendJson.AddMember("optimalPath", optimalPath, allocator);
+  }
 
   rapidjson::StringBuffer sendJsonBuffer;
   rapidjson::Writer<rapidjson::StringBuffer> sendJsonWriter(sendJsonBuffer);
