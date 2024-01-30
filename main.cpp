@@ -123,7 +123,9 @@ int main() {
     sendJson.AddMember("optimalPath", "At destination", allocator);
   }
   else {
-    sendJson.AddMember("optimalPath", optimalPath, allocator);
+    rapidjson::Value pathValue;
+    pathValue.SetString(optimalPath.c_str(), optimalPath.length(), allocator);
+    sendJson.AddMember("optimalPath", pathValue, allocator);
   }
 
   rapidjson::StringBuffer sendJsonBuffer;
