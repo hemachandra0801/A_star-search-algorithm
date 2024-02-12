@@ -8,8 +8,9 @@
 #include <unordered_set>
 
 struct cell; 
+struct graphNode;
 
 bool isValid(std::string&, std::unordered_set<std::string>&); 
-std::string astar(std::unordered_map<std::string, std::vector<std::pair<std::string, double>>>&, std::string&, std::string&);
+std::string astar(std::unordered_map<std::string, std::vector<graphNode>>&, std::string&, std::string&, std::string&);
 
 #endif

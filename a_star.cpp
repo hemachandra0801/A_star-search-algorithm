@@ -2,7 +2,6 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include <cmath>
 #include <stack>                             
 #include <set>
 #include <utility>
@@ -12,27 +11,48 @@
 
 using namespace std;
 
+// The speed of planes could vary
+const int SPEED = 850;
+
 struct cell {
 	std::string parent;
 	double f, g, h;
+};
+
+struct graphNode {
+  std::string node;
+  std::string start;
+  std::string depart;
+  double distance;
 };
 
 bool isValid(std::string& node, std::unordered_set<std::string>& nodes) {
 	return nodes.find(node) != nodes.end();
 }
 
-inline bool isUnBlocked(std::string& node, std::unordered_map<std::string, std::vector<std::pair<std::string, double>>>& graph) {
-	return graph[node].size() > 0;
+inline bool isUnBlocked(std::string& node, std::unordered_map<std::string, std::vector<graphNode>>& graph, string& currTime) {
+  for (auto& flight : graph[node]) {
+    if (flight.depart >= currTime) {
+      return true;
+    }
+  }
+	return false;
 }
 
 inline bool isDestination(std::string& node, std::string& goal) {
 	return node == goal;
 }
 
-inline double calculateHValue(std::string& node, std::string& goal) {
+inline double calculateHValue(std::string& node, std::string& goal, string& currTime) {
 	// Enter the heuristic here
 	//return (double)sqrt((row - dest.first) * (row - dest.first)+ (col - dest.second) * (col - dest.second));
 	return 0;
+}
+
+inline double timeDifference(std::string& a, std::string& b) {
+  int start = (10 * (a[0] - '0') + (a[1] - '0')) * 60 + 10 * (a[2] - '0') + (a[3] - '0');
+  int end = (10 * (b[0] - '0') + (b[1] - '0')) * 60 + 10 * (b[2] - '0') + (b[3] - '0');
+  return (end - start) * 1.0 / 60;
 }
 
 std::string tracePath(std::unordered_map<std::string, cell>& cellDetails, std::string& goal) {
@@ -62,7 +82,7 @@ std::string tracePath(std::unordered_map<std::string, cell>& cellDetails, std::s
   return optimalPath;
 }
 
-std::string astar(std::unordered_map<std::string, std::vector<std::pair<std::string, double>>>& graph, std::string& start, std::string& goal) {
+std::string astar(std::unordered_map<std::string, std::vector<graphNode>>& graph, std::string& start, std::string& goal, std::string& currTime) {
 
 	if (isDestination(start, goal)) {
 		std::cout << "We are already at the destination\n";
@@ -104,24 +124,28 @@ std::string astar(std::unordered_map<std::string, std::vector<std::pair<std::str
 
 
     for (auto& d : graph[i]) {
-			if (isDestination(d.first, goal)) {
-				cellDetails[d.first].parent= i;
+      if (d.depart < currTime) {
+        continue;
+      }
+
+			if (isDestination(d.node, goal)) {
+				cellDetails[d.node].parent= i;
 				std::cout << "\nThe shortest path has been found\n";
 				return tracePath(cellDetails, goal);
 			}
 
-			else if (!closedList[d.first] && isUnBlocked(d.first, graph)) {
-				gNew = cellDetails[i].g + d.second;
-				hNew = calculateHValue(d.first, goal);
+			else if (!closedList[d.node] && isUnBlocked(d.node, graph, currTime)) {
+				gNew = cellDetails[i].g + d.distance + SPEED * timeDifference(currTime, d.depart);
+				hNew = calculateHValue(d.node, goal, currTime);
 				fNew = gNew + hNew;
 
-				if (cellDetails[d.first].f == FLT_MAX || cellDetails[d.first].f > fNew) {
-					openList.insert(make_pair(fNew, d.first));
+				if (cellDetails[d.node].f == FLT_MAX || cellDetails[d.node].f > fNew) {
+					openList.insert(make_pair(fNew, d.node));
 
-					cellDetails[d.first].f = fNew;
-					cellDetails[d.first].g = gNew;
-					cellDetails[d.first].h = hNew;
-					cellDetails[d.first].parent = i;
+					cellDetails[d.node].f = fNew;
+					cellDetails[d.node].g = gNew;
+					cellDetails[d.node].h = hNew;
+					cellDetails[d.node].parent = i;
 				}
 			}
     }

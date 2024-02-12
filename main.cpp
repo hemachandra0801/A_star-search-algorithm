@@ -1,19 +1,30 @@
+#include <cstdio>
 #include <iostream>
 #include <curl/curl.h>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
 #include "a_star.h"
 #include "simdjson.h"
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
 
+struct graphNode {
+  std::string node;
+  std::string start;
+  std::string depart;
+  double distance;
+};
+
 size_t WriteCallback(void* contents, size_t size, size_t nmemb, std::string* output) {
     size_t totalSize = size * nmemb;
     output->append(static_cast<char*>(contents), totalSize);
     return totalSize;
 }
+// assuming input is sorted according to time
+// g++ -std=c++17 -I/rapidjson simdjson.cpp main.cpp a_star.cpp -lcurl
 
-// g++ -std=c++17 -I/rapidjson simdjson.cpp main.cpp -lcurl
 
 int main() {
   CURL* curl;
@@ -53,34 +64,49 @@ int main() {
 
 	std::string start = "";
 	std::string goal = "";
-	std::unordered_map<std::string, std::vector<std::pair<std::string, double>>> graph;
+  std::string currTime = "";
+	std::unordered_map<std::string, std::vector<graphNode>> graph;
 	std::unordered_set<std::string> nodes;
 
   simdjson::dom::element startElement = receivedJson["start"];
   simdjson::dom::element goalElement = receivedJson["destination"];
+  simdjson::dom::element timeElement = receivedJson["currTime"];
   simdjson::dom::element graphElement = receivedJson["graph"];
+
 
   if (startElement.is_string() && goalElement.is_string() && graphElement.is_array()) {
     start = startElement.get_string().value();
     goal = goalElement.get_string().value();
+    currTime = timeElement.get_string().value();
 
     for (simdjson::dom::element innerArrayElement : graphElement) {
       if (innerArrayElement.is_array()) {
-        double distance;
-        std::string node1, node2;
+        double dist;
+        std::string node1, node2, startTime, departTime;
 
         int currNode = 1;
         for (simdjson::dom::element value : innerArrayElement) {
           if (value.is_string()) {
-            if (currNode++ == 1) {
-              node1 = value.get_string().value();
+            switch (currNode) {
+              case 1:
+                node1 = value.get_string().value();
+                break;
+              case 2:
+                node2 = value.get_string().value();
+                break;
+              case 3:
+                startTime = value.get_string().value();
+                break;
+              case 4:
+                departTime = value.get_string().value();
+                break;
+              default:
+                std::cerr << "Json format is wrong" << '\n';
             }
-            else {
-              node2 = value.get_string().value();
-            }
+            ++currNode;
           }
           else if (value.is_double()) {
-            distance = value.get_double().value();
+            dist = value.get_double().value();
           }
           else {
             std::cerr << "Error: Unexpected value type in the inner array." << '\n';
@@ -90,7 +116,7 @@ int main() {
 
         nodes.insert(node1);
         nodes.insert(node2);
-        graph[node1].push_back({node2, distance});
+        graph[node1].push_back({node2, startTime, departTime, dist});
       }
     }
   }
@@ -109,7 +135,7 @@ int main() {
     return 1;
   }
 
-  std::string optimalPath = astar(graph, start, goal);
+  std::string optimalPath = astar(graph, start, goal, currTime);
 
   rapidjson::Document sendJson;
   sendJson.SetObject();
