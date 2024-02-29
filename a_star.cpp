@@ -11,7 +11,6 @@
 
 using namespace std;
 
-// The speed of planes could vary
 const int SPEED = 850;
 
 struct cell {
