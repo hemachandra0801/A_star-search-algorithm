@@ -82,7 +82,7 @@ int main() {
     for (simdjson::dom::element innerArrayElement : graphElement) {
       if (innerArrayElement.is_array()) {
         double dist;
-        std::string node1, node2, startTime, departTime;
+        std::string node1, node2, arrivalTime, departTime;
 
         int currNode = 1;
         for (simdjson::dom::element value : innerArrayElement) {
@@ -95,7 +95,7 @@ int main() {
                 node2 = value.get_string().value();
                 break;
               case 3:
-                startTime = value.get_string().value();
+                arrivalTime = value.get_string().value();
                 break;
               case 4:
                 departTime = value.get_string().value();
@@ -116,7 +116,7 @@ int main() {
 
         nodes.insert(node1);
         nodes.insert(node2);
-        graph[node1].push_back({node2, startTime, departTime, dist});
+        graph[node1].push_back({node2, arrivalTime, departTime, dist});
       }
     }
   }
