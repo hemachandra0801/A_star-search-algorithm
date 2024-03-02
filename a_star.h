@@ -11,6 +11,6 @@ struct cell;
 struct graphNode;
 
 bool isValid(std::string&, std::unordered_set<std::string>&); 
-std::string astar(std::unordered_map<std::string, std::vector<graphNode>>&, std::string&, std::string&, std::string&);
+std::pair<std::pair<double, double>, std::vector<std::vector<std::string>>>  astar(std::unordered_map<std::string, std::vector<graphNode>>&, std::string&, std::string&, std::string&, std::string&);
 
 #endif

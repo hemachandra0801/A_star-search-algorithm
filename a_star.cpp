@@ -2,17 +2,24 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include <stack>                             
+// #include <stack>                             
 #include <set>
 #include <utility>
 #include <float.h>
 #include <unordered_map>
 #include <unordered_set>
 
-using namespace std;
+// complete heuristic
+// add filter options  -> done
+// update weights in main.cpp itself  -> done
+// add distance and price to final output
+// update the algorithm to include other stuff
+// change logic for gNew  -> done
+// update code for changed json structure for better heuristic
+// remove currTime
 
-// The speed of planes could vary
-const int SPEED = 850;
+
+// using namespace std;
 
 struct cell {
 	std::string parent;
@@ -21,16 +28,21 @@ struct cell {
 
 struct graphNode {
   std::string node;
+  std::string mode;
+  std::string name;
   std::string start;
   std::string depart;
+  std::string reach;
   double distance;
+  double price;
+  double weight;
 };
 
 bool isValid(std::string& node, std::unordered_set<std::string>& nodes) {
 	return nodes.find(node) != nodes.end();
 }
 
-inline bool isUnBlocked(std::string& node, std::unordered_map<std::string, std::vector<graphNode>>& graph, string& currTime) {
+inline bool isUnBlocked(std::string& node, std::unordered_map<std::string, std::vector<graphNode>>& graph, std::string& currTime) {
   for (auto& flight : graph[node]) {
     if (flight.depart >= currTime) {
       return true;
@@ -43,7 +55,7 @@ inline bool isDestination(std::string& node, std::string& goal) {
 	return node == goal;
 }
 
-inline double calculateHValue(std::string& node, std::string& goal, string& currTime) {
+inline double calculateHValue(std::string& node, std::string& goal, std::string& currTime, std::string& filter) {
 	// Enter the heuristic here
 	//return (double)sqrt((row - dest.first) * (row - dest.first)+ (col - dest.second) * (col - dest.second));
 	return 0;
@@ -55,38 +67,39 @@ inline double timeDifference(std::string& a, std::string& b) {
   return (end - start) * 1.0 / 60;
 }
 
-std::string tracePath(std::unordered_map<std::string, cell>& cellDetails, std::string& goal) {
 
-  std::string optimalPath = "";
+// std::string tracePath(std::unordered_map<std::string, cell>& cellDetails, std::string& goal) {
+//
+//   std::string optimalPath = "";
+//
+// 	std::cout << '\n' << "The Path is ";
+// 	std::string curr = goal;
+//
+// 	std::stack<std::string> Path;
+//
+// 	while (cellDetails[curr].parent != curr) {
+// 		Path.push(curr);
+// 		curr = cellDetails[curr].parent;
+// 	}
+//
+// 	Path.push(curr);
+// 	while (!Path.empty()) {
+// 		std::string p = Path.top();
+// 		Path.pop();
+// 		std::cout << "-> " << p << " ";
+//     optimalPath += p;
+//     optimalPath += '-';
+// 	}
+//   optimalPath.pop_back();
+//
+//   return optimalPath;
+// }
 
-	std::cout << '\n' << "The Path is ";
-	std::string curr = goal;
-
-	std::stack<std::string> Path;
-
-	while (cellDetails[curr].parent != curr) {
-		Path.push(curr);
-		curr = cellDetails[curr].parent;
-	}
-
-	Path.push(curr);
-	while (!Path.empty()) {
-		std::string p = Path.top();
-		Path.pop();
-		std::cout << "-> " << p << " ";
-    optimalPath += p;
-    optimalPath += '-';
-	}
-  optimalPath.pop_back();
-
-  return optimalPath;
-}
-
-std::string astar(std::unordered_map<std::string, std::vector<graphNode>>& graph, std::string& start, std::string& goal, std::string& currTime) {
+std::pair<std::pair<double, double>, std::vector<std::vector<std::string>>> astar(std::unordered_map<std::string, std::vector<graphNode>>& graph, std::string& start, std::string& goal, std::string& currTime, std::string& filter) {
 
 	if (isDestination(start, goal)) {
 		std::cout << "We are already at the destination\n";
-		return "At destination";
+		return {};
 	}
 
 	std::unordered_map<std::string, bool> closedList;
@@ -112,6 +125,8 @@ std::string astar(std::unordered_map<std::string, std::vector<graphNode>>& graph
 
 	openList.insert(std::make_pair(0.0, start));
 
+  std::vector<std::vector<std::string>> routes;
+
 	while (!openList.empty()) {
 		std::pair<double, std::string> p = *openList.begin();
 
@@ -122,21 +137,48 @@ std::string astar(std::unordered_map<std::string, std::vector<graphNode>>& graph
 
 		double gNew, hNew, fNew;
 
-
     for (auto& d : graph[i]) {
-      if (d.depart < currTime) {
-        continue;
-      }
+      // if (d.depart < currTime) {
+      //   continue;
+      // }
 
 			if (isDestination(d.node, goal)) {
 				cellDetails[d.node].parent= i;
 				std::cout << "\nThe shortest path has been found\n";
-				return tracePath(cellDetails, goal);
+
+		    std::vector<std::string> route;
+        route.push_back(d.node);
+        route.push_back(d.name);
+        route.push_back(d.mode);
+
+        std::string currentNode = d.node;
+        double totalDistance = 0.0;
+        double totalPrice = 0.0;
+        
+        while (currentNode != start) {
+            cell c = cellDetails[currentNode];
+            route.insert(route.begin(), c.parent);
+            for (const auto& edge : graph[currentNode]) {
+              if (edge.node == c.parent) {
+                route.push_back(std::to_string(edge.distance));
+                route.push_back(std::to_string(edge.price));                 
+                totalDistance += edge.distance;
+                totalPrice += edge.price;
+                break;
+              }
+            }
+            currentNode = c.parent;
+        }
+        
+
+        routes.push_back(route);
+
+        return {{totalDistance, totalPrice}, routes};	
 			}
 
 			else if (!closedList[d.node] && isUnBlocked(d.node, graph, currTime)) {
-				gNew = cellDetails[i].g + d.distance + SPEED * timeDifference(currTime, d.depart);
-				hNew = calculateHValue(d.node, goal, currTime);
+				gNew = cellDetails[i].g + d.weight;
+				hNew = calculateHValue(d.node, goal, currTime, filter);
 				fNew = gNew + hNew;
 
 				if (cellDetails[d.node].f == FLT_MAX || cellDetails[d.node].f > fNew) {
@@ -152,5 +194,5 @@ std::string astar(std::unordered_map<std::string, std::vector<graphNode>>& graph
 	}
 
   std::cout << "Path not found\n";
-  return "Path not found";
+  return {};
 }
