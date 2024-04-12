@@ -2,24 +2,11 @@
 #include <iostream>
 #include <string>
 #include <vector>
-// #include <stack>                             
 #include <set>
 #include <utility>
 #include <float.h>
 #include <unordered_map>
 #include <unordered_set>
-
-// complete heuristic
-// add filter options  -> done
-// update weights in main.cpp itself  -> done
-// add distance and price to final output
-// update the algorithm to include other stuff
-// change logic for gNew  -> done
-// update code for changed json structure for better heuristic
-// remove currTime
-
-
-// using namespace std;
 
 struct cell {
 	std::string parent;
@@ -68,33 +55,6 @@ inline double timeDifference(std::string& a, std::string& b) {
 }
 
 
-// std::string tracePath(std::unordered_map<std::string, cell>& cellDetails, std::string& goal) {
-//
-//   std::string optimalPath = "";
-//
-// 	std::cout << '\n' << "The Path is ";
-// 	std::string curr = goal;
-//
-// 	std::stack<std::string> Path;
-//
-// 	while (cellDetails[curr].parent != curr) {
-// 		Path.push(curr);
-// 		curr = cellDetails[curr].parent;
-// 	}
-//
-// 	Path.push(curr);
-// 	while (!Path.empty()) {
-// 		std::string p = Path.top();
-// 		Path.pop();
-// 		std::cout << "-> " << p << " ";
-//     optimalPath += p;
-//     optimalPath += '-';
-// 	}
-//   optimalPath.pop_back();
-//
-//   return optimalPath;
-// }
-
 std::pair<std::pair<double, double>, std::vector<std::vector<std::string>>> astar(std::unordered_map<std::string, std::vector<graphNode>>& graph, std::string& start, std::string& goal, std::string& currTime, std::string& filter) {
 
 	if (isDestination(start, goal)) {
@@ -138,9 +98,6 @@ std::pair<std::pair<double, double>, std::vector<std::vector<std::string>>> asta
 		double gNew, hNew, fNew;
 
     for (auto& d : graph[i]) {
-      // if (d.depart < currTime) {
-      //   continue;
-      // }
 
 			if (isDestination(d.node, goal)) {
 				cellDetails[d.node].parent= i;
