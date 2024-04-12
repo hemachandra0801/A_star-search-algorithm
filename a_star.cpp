@@ -1,70 +1,70 @@
+#include "a_star.h"
 #include <iostream>
+#include <string>
 #include <vector>
-#include <cmath>
-#include <stack>                             
 #include <set>
-#include <iterator>
 #include <utility>
 #include <float.h>
 #include <unordered_map>
 #include <unordered_set>
 
-using namespace std;
-
 struct cell {
-	string parent;
+	std::string parent;
 	double f, g, h;
 };
 
-inline bool isValid(string& node, unordered_set<string>& nodes) {
+struct graphNode {
+  std::string node;
+  std::string mode;
+  std::string name;
+  std::string start;
+  std::string depart;
+  std::string reach;
+  double distance;
+  double price;
+  double weight;
+};
+
+bool isValid(std::string& node, std::unordered_set<std::string>& nodes) {
 	return nodes.find(node) != nodes.end();
 }
 
-inline bool isUnBlocked(string& node, unordered_map<string, vector<pair<string, double>>>& graph) {
-	return graph[node].size() > 0;
+inline bool isUnBlocked(std::string& node, std::unordered_map<std::string, std::vector<graphNode>>& graph, std::string& currTime) {
+  for (auto& flight : graph[node]) {
+    if (flight.depart >= currTime) {
+      return true;
+    }
+  }
+	return false;
 }
 
-inline bool isDestination(string& node, string& goal) {
+inline bool isDestination(std::string& node, std::string& goal) {
 	return node == goal;
 }
 
-inline double calculateHValue(string& node, string& goal) {
+inline double calculateHValue(std::string& node, std::string& goal, std::string& currTime, std::string& filter) {
 	// Enter the heuristic here
 	//return (double)sqrt((row - dest.first) * (row - dest.first)+ (col - dest.second) * (col - dest.second));
 	return 0;
 }
 
-void tracePath(unordered_map<string, cell>& cellDetails, string& goal) {
-
-	std::cout << '\n' << "The Path is ";
-	string curr = goal;
-
-	stack<string> Path;
-
-	while (cellDetails[curr].parent != curr) {
-		Path.push(curr);
-		string temp_curr = cellDetails[curr].parent;
-		curr = temp_curr;
-	}
-
-	Path.push(curr);
-	while (!Path.empty()) {
-		string p = Path.top();
-		Path.pop();
-		std::cout << "-> " << p << " ";
-	}
+inline double timeDifference(std::string& a, std::string& b) {
+  int start = (10 * (a[0] - '0') + (a[1] - '0')) * 60 + 10 * (a[2] - '0') + (a[3] - '0');
+  int end = (10 * (b[0] - '0') + (b[1] - '0')) * 60 + 10 * (b[2] - '0') + (b[3] - '0');
+  return (end - start) * 1.0 / 60;
 }
 
-void astar(unordered_map<string, vector<pair<string, double>>>& graph, string& start, string& goal) {
+
+std::pair<std::pair<double, double>, std::vector<std::vector<std::string>>> astar(std::unordered_map<std::string, std::vector<graphNode>>& graph, std::string& start, std::string& goal, std::string& currTime, std::string& filter) {
 
 	if (isDestination(start, goal)) {
 		std::cout << "We are already at the destination\n";
-		return;
+		return {};
 	}
 
-	unordered_map<string, bool> closedList;
+	std::unordered_map<std::string, bool> closedList;
 
-	unordered_map<string, cell> cellDetails;
+	std::unordered_map<std::string, cell> cellDetails;
 
 
 	for (auto& i : graph) {
@@ -81,93 +81,75 @@ void astar(unordered_map<string, vector<pair<string, double>>>& graph, string& s
 	cellDetails[start].h = 0.0;
 	cellDetails[start].parent = start;
 
-	set<pair<double, string>> openList;
+	std::set<std::pair<double, std::string>> openList;
 
-	openList.insert(make_pair(0.0, start));
+	openList.insert(std::make_pair(0.0, start));
 
-	bool foundDest = false;
+  std::vector<std::vector<std::string>> routes;
 
 	while (!openList.empty()) {
-		pair<double, string> p = *openList.begin();
+		std::pair<double, std::string> p = *openList.begin();
 
 		openList.erase(openList.begin());
 
-		string i = p.second;
+		std::string i = p.second;
 		closedList[i] = true;
 
 		double gNew, hNew, fNew;
 
+    for (auto& d : graph[i]) {
 
-        for (auto& d : graph[i]) {
-			if (isDestination(d.first, goal)) {
-				cellDetails[d.first].parent= i;
+			if (isDestination(d.node, goal)) {
+				cellDetails[d.node].parent= i;
 				std::cout << "\nThe shortest path has been found\n";
-				tracePath(cellDetails, goal);
-				foundDest = true;
-				return;
+
+		    std::vector<std::string> route;
+        route.push_back(d.node);
+        route.push_back(d.name);
+        route.push_back(d.mode);
+
+        std::string currentNode = d.node;
+        double totalDistance = 0.0;
+        double totalPrice = 0.0;
+        
+        while (currentNode != start) {
+            cell c = cellDetails[currentNode];
+            route.insert(route.begin(), c.parent);
+            for (const auto& edge : graph[currentNode]) {
+              if (edge.node == c.parent) {
+                route.push_back(std::to_string(edge.distance));
+                route.push_back(std::to_string(edge.price));                 
+                totalDistance += edge.distance;
+                totalPrice += edge.price;
+                break;
+              }
+            }
+            currentNode = c.parent;
+        }
+        
+
+        routes.push_back(route);
+
+        return {{totalDistance, totalPrice}, routes};	
 			}
 
-			else if (!closedList[d.first] && isUnBlocked(d.first, graph)) {
-				gNew = cellDetails[i].g + d.second;
-				hNew = calculateHValue(d.first, goal);
+			else if (!closedList[d.node] && isUnBlocked(d.node, graph, currTime)) {
+				gNew = cellDetails[i].g + d.weight;
+				hNew = calculateHValue(d.node, goal, currTime, filter);
 				fNew = gNew + hNew;
 
-				if (cellDetails[d.first].f == FLT_MAX || cellDetails[d.first].f > fNew) {
-					openList.insert(make_pair(fNew, d.first));
+				if (cellDetails[d.node].f == FLT_MAX || cellDetails[d.node].f > fNew) {
+					openList.insert(make_pair(fNew, d.node));
 
-					cellDetails[d.first].f = fNew;
-					cellDetails[d.first].g = gNew;
-					cellDetails[d.first].h = hNew;
-					cellDetails[d.first].parent = i;
+					cellDetails[d.node].f = fNew;
+					cellDetails[d.node].g = gNew;
+					cellDetails[d.node].h = hNew;
+					cellDetails[d.node].parent = i;
 				}
 			}
-        }
+    }
 	}
 
-	if (!foundDest)
-		std::cout << "Destination cannot be reached\n";
-
-	return;
-}
-
-int main() {
-
-	unordered_map<string, vector<pair<string, double>>> graph;
-	unordered_set<string> nodes;
-
-	int edges;
-	std::cout << "Enter the number of edges: ";
-	std::cin >> edges;
-
-	std::cout << "\nEnter the graph below (NODE1 -> NODE2 -> DISTANCE)\n";
-	for (int i = 0; i < edges; ++i) {
-		double distance;
-		string node1, node2;
-		std::cin >> node1 >> node2 >> distance;
-
-		nodes.insert(node1);
-		nodes.insert(node2);
-		graph[node1].push_back({node2, distance});
-	}
-
-	string start = "";
-	string goal = "";
-
-
-	std::cout << "\nEnter the name of the starting location: ";
-	while (std::cin >> start) {
-		if (isValid(start, nodes)) break;
-		std::cout << "Source is invalid\n";
-	}
-
-	std::cout << "\nEnter the name of the destination: ";
-	while (std::cin >> goal) {
-		if (isValid(goal, nodes)) break;
-		std::cout << "Destination is invalid\n";
-	}
-	
-
-	astar(graph, start, goal);
-
-	return 0;
+  std::cout << "Path not found\n";
+  return {};
 }
